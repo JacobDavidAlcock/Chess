@@ -26,9 +26,9 @@ def main_menu(screen, clock, width, height):
         
         screen.fill(background_colour)
         screen.blit(title_text, title_rect)
-        pygame.draw.rect(screen, (0, 0, 0), play_rect, 2)
+        pygame.draw.rect(screen, background_colour, play_rect, 2)
         screen.blit(play_text, play_rect)
-        pygame.draw.rect(screen, (0, 0, 0), exit_rect, 2)
+        pygame.draw.rect(screen, background_colour, exit_rect, 2)
         screen.blit(exit_text, exit_rect)
         
         pygame.display.update()

@@ -19,10 +19,15 @@ clock = pygame.time.Clock()
 # Create the board object
 chess_board = board.Board()
 
+
 # Main loop
 def main_loop():
+     # Set the start game variable to False
      startGame = False
+     # Set the selected piece to None
      selected_piece = None
+     # Set the current player
+     current_player = 'white'
      while True:
         # Handle Pygame events
         for event in pygame.event.get():
@@ -34,10 +39,14 @@ def main_loop():
                 x //= 50
                 y //= 50
                 if selected_piece is not None:
-                    chess_board.move_piece(selected_piece, selected_piece.position, (x, y))
-                    selected_piece = None
+                    if chess_board.move_piece(selected_piece, selected_piece.position, (x, y)):
+                        selected_piece = None
+                        if current_player == 'white':
+                            current_player = 'black'
+                        else:
+                            current_player = 'white'
                 piece = chess_board.get_piece_at_position((x, y))
-                if piece is not None and piece.color == 'black':  # Only allow white pieces to be selected
+                if piece is not None and piece.color is not current_player:  # Only allow white pieces to be selected
                     selected_piece = piece
                 else:
                     selected_piece = None
