@@ -13,26 +13,30 @@ class Board:
         return self.grid[x][y]
     
     # Check if the king is in check
-    def check_check_mate(self):
+    def check_check(self):
         white = self.king_position['white']
         black = self.king_position['black']
         white_moves = self.get_piece_at_position(white).get_moves()
         black_moves = self.get_piece_at_position(black).get_moves()
-        if len(white_moves) == 0:
-            for x in range(8):
-                for y in range(8):
-                    piece = self.get_piece_at_position((x, y))
-                    if piece is not None and piece.color == 'black':
-                        if (x, y) in black_moves:
-                            print('Checkmate')
+        for x in range(8):
+            for y in range(8):
+                # Get the piece at the current position
+                piece = self.get_piece_at_position((x, y))
+                # If there is a piece and it is black
+                if piece is not None and piece.color == 'black':
+                    # Get the moves of the piece
+                    for move in piece.get_moves():
+                        # If the move is the same as the white king position
+                        if move == white:
+                            print('Check')
                             return True
-        if len(black_moves) == 0:
-            for x in range(8):
-                for y in range(8):
-                    piece = self.get_piece_at_position((x, y))
-                    if piece is not None and piece.color == 'white':
-                        if (x, y) in white_moves:
-                            print('Checkmate')
+                # If there is a piece and it is white
+                elif piece is not None and piece.color == 'white':
+                    # Get the moves of the piece
+                    for move in piece.get_moves():
+                        # If the move is the same as the black king positions
+                        if move == black:
+                            print('Check')
                             return True
         return False
     
@@ -46,7 +50,7 @@ class Board:
             piece.move(position)
             if isinstance(piece, King):
                 self.king_position[piece.color] = position
-            self.check_check_mate()
+            self.check_check()
             return True
         return False
 

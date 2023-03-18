@@ -62,7 +62,6 @@ def main_loop():
         
             # Draw the chess board and pieces
             chess_board.draw(surface=screen, selected_piece=selected_piece)
-
             # Update the screen
             pygame.display.update()
         
