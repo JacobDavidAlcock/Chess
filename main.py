@@ -69,6 +69,49 @@ def draw_panel(surface, current_player, is_in_check, captured_white, captured_bl
     # Draw surrender button
     surrender_button.draw(screen)
 
+def animate_move(piece, start_pos_board, end_pos_board, real_board_state):
+    """Animates a piece moving from start to end."""
+    start_x_pixel = start_pos_board[0] * 50
+    start_y_pixel = start_pos_board[1] * 50
+    end_x_pixel = end_pos_board[0] * 50
+    end_y_pixel = end_pos_board[1] * 50
+
+    total_frames = 15  # Animation duration
+    
+    # Create a temporary board surface without the piece that is moving
+    temp_board_surface = pygame.Surface((BOARD_SIZE, BOARD_SIZE))
+    
+    # Temporarily remove piece from start to draw the underlying board
+    moving_piece_data = real_board_state.get_piece_at_position(start_pos_board)
+    real_board_state.grid[start_pos_board[0]][start_pos_board[1]] = None
+
+    for frame in range(total_frames + 1):
+        progress = frame / total_frames
+        
+        # Linear interpolation
+        current_x = start_x_pixel + (end_x_pixel - start_x_pixel) * progress
+        current_y = start_y_pixel + (end_y_pixel - start_y_pixel) * progress
+        
+        # Redraw everything
+        screen.fill(BACKGROUND_COLOR)
+        
+        # Draw the board state (without the moving piece)
+        real_board_state.draw(surface=temp_board_surface)
+        screen.blit(temp_board_surface, (0, board_y_offset))
+        
+        # Draw the UI panel
+        is_in_check = real_board_state.is_in_check('white' if moving_piece_data.color == 'black' else 'black')
+        draw_panel(screen, moving_piece_data.color, is_in_check, real_board_state.captured_pieces['white'], real_board_state.captured_pieces['black'])
+        
+        # Draw the floating piece
+        screen.blit(moving_piece_data.image, (current_x + 10, current_y + board_y_offset + 5))
+        
+        pygame.display.flip()
+        clock.tick(60)
+        
+    # Restore piece to its logical start position before the final move
+    real_board_state.grid[start_pos_board[0]][start_pos_board[1]] = moving_piece_data
+
 # Main loop
 def main_loop():
      # Game state variables
@@ -106,20 +149,21 @@ def main_loop():
 
         if not game_over:
             if is_ai_turn:
-                pygame.time.wait(100) # Short delay for AI move
                 piece, move = ai_player.get_move(chess_board)
-                chess_board.move_piece(piece, piece.position, move)
-                current_player = 'white'
-                
-                # Check game status after AI move
-                game_status = chess_board.check_game_status(current_player)
-                if game_status:
-                    game_over = True
-                    if game_status == 'checkmate':
-                        winner = 'Black'
-                        game_over_message = f"Checkmate! {winner} wins."
-                    else:
-                        game_over_message = "Stalemate! It's a draw."
+                if piece and move:
+                    animate_move(piece, piece.position, move, chess_board)
+                    chess_board.move_piece(piece, piece.position, move)
+                    current_player = 'white'
+                    
+                    # Check game status after AI move
+                    game_status = chess_board.check_game_status(current_player)
+                    if game_status:
+                        game_over = True
+                        if game_status == 'checkmate':
+                            winner = 'Black'
+                            game_over_message = f"Checkmate! {winner} wins."
+                        else:
+                            game_over_message = "Stalemate! It's a draw."
             else: # Human player's turn
                 for event in pygame.event.get():
                     if event.type == pygame.QUIT:
@@ -141,7 +185,12 @@ def main_loop():
                             board_y //= 50
                             if selected_piece is not None:
                                 if (board_x, board_y) in legal_moves_for_selected_piece:
-                                    chess_board.move_piece(selected_piece, selected_piece.position, (board_x, board_y))
+                                    start_pos = selected_piece.position
+                                    end_pos = (board_x, board_y)
+                                    
+                                    animate_move(selected_piece, start_pos, end_pos, chess_board)
+                                    chess_board.move_piece(selected_piece, start_pos, end_pos)
+                                    
                                     selected_piece = None
                                     legal_moves_for_selected_piece = []
                                     current_player = 'black' if current_player == 'white' else 'white'
