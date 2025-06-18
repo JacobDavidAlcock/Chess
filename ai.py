@@ -103,4 +103,55 @@ class MinimaxAI:
                         score += value
                     else:
                         score -= value
-        return score 
+        return score
+
+class AlphaBetaAI(MinimaxAI):
+    def __init__(self, color, depth=3): # Increased default depth for a tougher AI
+        super().__init__(color, depth)
+
+    def get_move(self, board):
+        best_move = None
+        best_value = -float('inf')
+        
+        for start_pos, end_pos in self._get_all_legal_moves(board, self.color):
+            piece_to_move = board.get_piece_at_position(start_pos)
+            undo_data = board._make_move_for_simulation(piece_to_move, start_pos, end_pos)
+            value = self.minimax(board, self.depth - 1, -float('inf'), float('inf'), False)
+            board._undo_move_for_simulation(undo_data)
+            
+            if value > best_value:
+                best_value = value
+                best_move = (piece_to_move, end_pos)
+                
+        return best_move
+
+    def minimax(self, board, depth, alpha, beta, is_maximizing):
+        if depth == 0:
+            return self._evaluate_board(board)
+
+        player_color = self.color if is_maximizing else ('white' if self.color == 'black' else 'black')
+        
+        if is_maximizing:
+            max_eval = -float('inf')
+            for start_pos, end_pos in self._get_all_legal_moves(board, player_color):
+                piece_to_move = board.get_piece_at_position(start_pos)
+                undo_data = board._make_move_for_simulation(piece_to_move, start_pos, end_pos)
+                eval = self.minimax(board, depth - 1, alpha, beta, False)
+                board._undo_move_for_simulation(undo_data)
+                max_eval = max(max_eval, eval)
+                alpha = max(alpha, eval)
+                if beta <= alpha:
+                    break # Prune
+            return max_eval if max_eval != -float('inf') else 0
+        else: # Minimizing
+            min_eval = float('inf')
+            for start_pos, end_pos in self._get_all_legal_moves(board, player_color):
+                piece_to_move = board.get_piece_at_position(start_pos)
+                undo_data = board._make_move_for_simulation(piece_to_move, start_pos, end_pos)
+                eval = self.minimax(board, depth - 1, alpha, beta, True)
+                board._undo_move_for_simulation(undo_data)
+                min_eval = min(min_eval, eval)
+                beta = min(beta, eval)
+                if beta <= alpha:
+                    break # Prune
+            return min_eval if min_eval != float('inf') else 0 

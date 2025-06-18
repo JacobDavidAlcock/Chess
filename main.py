@@ -1,29 +1,78 @@
 import pygame, main_menu, board
-from ai import RandomAI, MinimaxAI
+from ai import RandomAI, MinimaxAI, AlphaBetaAI
+from gui_components import Button
 
 # Initialize the game engine
 pygame.init()
 
-# Set the width and height of the screen [width, height]
-size = width, height = 400, 400
-# Set the screen
+# --- Constants and Setup ---
+# Screen dimensions
+BOARD_SIZE = 400
+PANEL_SIZE = 250
+WIDTH, HEIGHT = BOARD_SIZE + PANEL_SIZE, 600 # Increased height
+size = (WIDTH, HEIGHT)
+
+# Colors
+BACKGROUND_COLOR = (49, 46, 43) # Wood-like dark brown
+PANEL_COLOR = (34, 34, 34) # Dark grey for the panel
+TEXT_COLOR = (255, 255, 255)
+CHECK_COLOR = (255, 80, 80) # Bright red for check
+
+# Screen setup
 screen = pygame.display.set_mode(size)
-# Set the background color
-background_colour = 255, 255, 255
-# Set the screen background
-screen.fill(background_colour)
-# Set the caption
 pygame.display.set_caption("Chess")
-# Set the clock
 clock = pygame.time.Clock()
+board_surface = pygame.Surface((BOARD_SIZE, BOARD_SIZE))
+board_y_offset = (HEIGHT - BOARD_SIZE) // 2
 
-# Create the board object
-chess_board = board.Board()
+# Fonts
+try:
+    ui_font_bold = pygame.font.SysFont("helveticaneue", 28, bold=True)
+    ui_font = pygame.font.SysFont("helveticaneue", 18)
+    capture_font = pygame.font.SysFont("helveticaneue", 16)
+except:
+    ui_font_bold = pygame.font.SysFont(None, 36, bold=True)
+    ui_font = pygame.font.SysFont(None, 24)
+    capture_font = pygame.font.SysFont(None, 22)
 
+# UI Elements
+PANEL_X = BOARD_SIZE + 20
+surrender_button = Button(BOARD_SIZE + 25, HEIGHT - 70, PANEL_SIZE - 50, 50, "Surrender", ui_font_bold, (180, 70, 70), (237, 100, 100))
+
+def draw_panel(surface, current_player, is_in_check, captured_white, captured_black):
+    """Draws the UI panel on the right side of the screen."""
+    panel_rect = pygame.Rect(BOARD_SIZE, 0, PANEL_SIZE, HEIGHT)
+    pygame.draw.rect(surface, PANEL_COLOR, panel_rect)
+
+    # Turn indicator
+    turn_text = f"{current_player.capitalize()}'s Turn"
+    turn_surf = ui_font_bold.render(turn_text, True, TEXT_COLOR)
+    surface.blit(turn_surf, (PANEL_X, 20))
+
+    # Check indicator
+    if is_in_check:
+        check_surf = ui_font_bold.render("CHECK!", True, CHECK_COLOR)
+        surface.blit(check_surf, (PANEL_X, 60))
+
+    # Captured pieces
+    y_offset = 120
+    for color, pieces in [("White", captured_black), ("Black", captured_white)]:
+        capture_title_surf = ui_font.render(f"Captured by {color}:", True, TEXT_COLOR)
+        surface.blit(capture_title_surf, (PANEL_X, y_offset))
+        
+        for i, piece in enumerate(pieces):
+            # Draw smaller images for captured pieces
+            img = pygame.transform.scale(piece.image, (20, 25))
+            surface.blit(img, (PANEL_X + (i % 8) * 25, y_offset + 30 + (i // 8) * 30))
+        y_offset += 150 # Increased spacing
+        
+    # Draw surrender button
+    surrender_button.draw(screen)
 
 # Main loop
 def main_loop():
-     # Set the start game variable to False
+     # Game state variables
+     chess_board = board.Board()
      game_mode = None
      ai_player = None
      # Set the selected piece to None
@@ -43,15 +92,17 @@ def main_loop():
             game_over = False
             selected_piece = None
             
-            game_mode = main_menu.main_menu(screen=screen, clock=clock, width=width, height=height)
+            game_mode = main_menu.main_menu(screen=screen, clock=clock, width=WIDTH, height=HEIGHT)
             if game_mode == "pva_easy":
                 ai_player = RandomAI('black')
             elif game_mode == "pva_hard":
                 ai_player = MinimaxAI('black')
+            elif game_mode == "pva_extra_hard":
+                ai_player = AlphaBetaAI('black')
             continue # Go back to the start of the loop to process the next frame
 
         # --- Event Handling ---
-        is_ai_turn = (game_mode in ["pva_easy", "pva_hard"] and current_player == 'black')
+        is_ai_turn = (game_mode in ["pva_easy", "pva_hard", "pva_extra_hard"] and current_player == 'black')
 
         if not game_over:
             if is_ai_turn:
@@ -74,34 +125,44 @@ def main_loop():
                     if event.type == pygame.QUIT:
                         pygame.quit()
                         quit()
-                    elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+
+                    if surrender_button.handle_event(event):
+                        game_over = True
+                        winner = 'Black' if current_player == 'white' else 'White'
+                        game_over_message = f"{current_player.capitalize()} surrendered. {winner} wins."
+                        break # Exit event loop for this frame
+
+                    if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                         x, y = event.pos
-                        x //= 50
-                        y //= 50
-                        if selected_piece is not None:
-                            if (x, y) in legal_moves_for_selected_piece:
-                                chess_board.move_piece(selected_piece, selected_piece.position, (x, y))
+                        if x < BOARD_SIZE and y >= board_y_offset and y < board_y_offset + BOARD_SIZE: # Only process clicks on the board
+                            board_x = x
+                            board_y = y - board_y_offset
+                            board_x //= 50
+                            board_y //= 50
+                            if selected_piece is not None:
+                                if (board_x, board_y) in legal_moves_for_selected_piece:
+                                    chess_board.move_piece(selected_piece, selected_piece.position, (board_x, board_y))
+                                    selected_piece = None
+                                    legal_moves_for_selected_piece = []
+                                    current_player = 'black' if current_player == 'white' else 'white'
+                                    
+                                    # Check game status after human move
+                                    game_status = chess_board.check_game_status(current_player)
+                                    if game_status:
+                                        game_over = True
+                                        if game_status == 'checkmate':
+                                            winner = 'White'
+                                            game_over_message = f"Checkmate! {winner} wins."
+                                        else:
+                                            game_over_message = "Stalemate! It's a draw."
+
+                            piece = chess_board.get_piece_at_position((board_x, board_y))
+                            if piece is not None and piece.color == current_player:
+                                selected_piece = piece
+                                legal_moves_for_selected_piece = chess_board.get_legal_moves_for_piece(piece)
+                            else:
                                 selected_piece = None
                                 legal_moves_for_selected_piece = []
-                                current_player = 'black' if current_player == 'white' else 'white'
-                                
-                                # Check game status after human move
-                                game_status = chess_board.check_game_status(current_player)
-                                if game_status:
-                                    game_over = True
-                                    if game_status == 'checkmate':
-                                        winner = 'White'
-                                        game_over_message = f"Checkmate! {winner} wins."
-                                    else:
-                                        game_over_message = "Stalemate! It's a draw."
-
-                        piece = chess_board.get_piece_at_position((x, y))
-                        if piece is not None and piece.color == current_player:
-                            selected_piece = piece
-                            legal_moves_for_selected_piece = chess_board.get_legal_moves_for_piece(piece)
-                        else:
-                            selected_piece = None
-                            legal_moves_for_selected_piece = []
         else: # Game is over
              for event in pygame.event.get():
                 if event.type == pygame.QUIT:
@@ -111,23 +172,31 @@ def main_loop():
                     game_mode = None # Return to main menu
 
         # --- Drawing ---
-        # Clear the screen with the background color
-        screen.fill(background_colour)
+        screen.fill(BACKGROUND_COLOR)
     
-        # Draw the chess board and pieces
-        chess_board.draw(surface=screen, selected_piece=selected_piece, legal_moves=legal_moves_for_selected_piece)
+        # Draw the chess board onto its own surface, then blit it to the screen
+        chess_board.draw(surface=board_surface, selected_piece=selected_piece, legal_moves=legal_moves_for_selected_piece)
+        screen.blit(board_surface, (0, board_y_offset))
+
+        # Draw UI Panel
+        is_in_check = chess_board.is_in_check(current_player)
+        draw_panel(screen, current_player, is_in_check, chess_board.captured_pieces['white'], chess_board.captured_pieces['black'])
 
         if game_over:
-            font = pygame.font.SysFont(None, 50)
-            text = font.render(game_over_message, True, (255, 0, 0))
-            text_rect = text.get_rect(center=(width // 2, height // 2))
-            pygame.draw.rect(screen, (255, 255, 255), text_rect.inflate(20, 20))
+            # Dim the screen
+            s = pygame.Surface((WIDTH, HEIGHT), pygame.SRCALPHA)
+            s.fill((0,0,0,128)) 
+            screen.blit(s, (0,0))
+
+            font = ui_font_bold
+            text = font.render(game_over_message, True, TEXT_COLOR)
+            text_rect = text.get_rect(center=(WIDTH // 2, HEIGHT // 2 - 20))
             screen.blit(text, text_rect)
             
             # Add a sub-text to restart
-            sub_font = pygame.font.SysFont(None, 30)
-            sub_text = sub_font.render("Click anywhere to return to menu", True, (0, 0, 0))
-            sub_text_rect = sub_text.get_rect(center=(width // 2, height // 2 + 40))
+            sub_font = ui_font
+            sub_text = sub_font.render("Click anywhere to return to menu", True, (200, 200, 200))
+            sub_text_rect = sub_text.get_rect(center=(WIDTH // 2, HEIGHT // 2 + 20))
             screen.blit(sub_text, sub_text_rect)
 
         # Update the screen

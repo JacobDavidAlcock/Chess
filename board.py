@@ -6,6 +6,7 @@ class Board:
         self.grid = [[None for _ in range(8)] for _ in range(8)]
         self.create_pieces()
         self.king_position = {'white': (4, 0), 'black': (4, 7)}
+        self.captured_pieces = {'white': [], 'black': []}
 
     # Get the piece at a given position
     def get_piece_at_position(self, position):
@@ -56,7 +57,11 @@ class Board:
 
     # Move a piece to a given position
     def move_piece(self, piece, start, position):
-        # This is now the definitive move function. No return value needed.
+        # This is now the definitive move function.
+        captured_piece = self.get_piece_at_position(position)
+        if captured_piece:
+            self.captured_pieces[captured_piece.color].append(captured_piece)
+
         piece.move(position)
         x, y = position
         self.grid[x][y] = piece
@@ -133,17 +138,21 @@ class Board:
 
     # Draw the board
     def draw(self, surface, selected_piece=None, legal_moves=[]):
+        # Classic color scheme
+        colors = [(238, 238, 210), (118, 150, 86)] # Off-white and dark green
+        highlight_color = (246, 246, 130) # Yellow for legal moves
+        selected_color = (186, 202, 68) # Lighter green for selected piece
+        
         for y in range(8):
             for x in range(8):
-                if (x + y) % 2 == 0:
-                    color = (209, 139, 71)
-                else:
-                    color = (255, 206, 158)
+                color = colors[(x + y) % 2]
+                
                 if selected_piece is not None:
-                    if (x, y) in legal_moves:
-                        color = (0, 255, 0)
-                    elif selected_piece == self.grid[x][y]:
-                        color = (255, 0, 0)
+                    if selected_piece.position == (x,y):
+                        color = selected_color
+                    elif (x, y) in legal_moves:
+                        color = highlight_color
+                        
                 pygame.draw.rect(surface, color, (x*50, y*50, 50, 50))
                 piece = self.grid[x][y]
                 if piece is not None:
@@ -153,4 +162,5 @@ class Board:
         new_board = Board()
         new_board.grid = [[piece.copy(new_board.get_piece_at_position) if piece is not None else None for piece in row] for row in self.grid]
         new_board.king_position = self.king_position.copy()
+        new_board.captured_pieces = {color: list(pieces) for color, pieces in self.captured_pieces.items()}
         return new_board
