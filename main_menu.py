@@ -38,12 +38,12 @@ def main_menu(screen, clock, width, height):
     }
     
     ai_buttons = {
-        "pva_easy": Button(btn_x, 140, btn_width, btn_height, "AI: Easy", button_font, BUTTON_COLOR, BUTTON_HOVER_COLOR),
-        "pva_hard": Button(btn_x, 210, btn_width, btn_height, "AI: Hard", button_font, BUTTON_COLOR, BUTTON_HOVER_COLOR),
-        "pva_extra_hard": Button(btn_x, 280, btn_width, btn_height, "AI: Extra Hard", button_font, BUTTON_COLOR, BUTTON_HOVER_COLOR),
-        "pva_aggressive": Button(btn_x, 350, btn_width, btn_height, "AI: Aggressive", button_font, BUTTON_COLOR, BUTTON_HOVER_COLOR),
-        "pva_defensive": Button(btn_x, 420, btn_width, btn_height, "AI: Defensive", button_font, BUTTON_COLOR, BUTTON_HOVER_COLOR),
-        "back": Button(btn_x, 490, btn_width, btn_height, "Back", button_font, BUTTON_COLOR, BUTTON_HOVER_COLOR)
+        "pva_easy": Button(btn_x, 140, btn_width, btn_height, "Easy (Random)", button_font, BUTTON_COLOR, BUTTON_HOVER_COLOR),
+        "pva_hard": Button(btn_x, 200, btn_width, btn_height, "Medium (Smart)", button_font, BUTTON_COLOR, BUTTON_HOVER_COLOR),
+        "pva_aggressive": Button(btn_x, 260, btn_width, btn_height, "Hard (Aggressive)", button_font, BUTTON_COLOR, BUTTON_HOVER_COLOR),
+        "pva_defensive": Button(btn_x, 320, btn_width, btn_height, "Hard (Defensive)", button_font, BUTTON_COLOR, BUTTON_HOVER_COLOR),
+        "pva_extra_hard": Button(btn_x, 380, btn_width, btn_height, "Expert (Master)", button_font, BUTTON_COLOR, BUTTON_HOVER_COLOR),
+        "back": Button(btn_x, 450, btn_width, btn_height, "Back", button_font, BUTTON_COLOR, BUTTON_HOVER_COLOR)
     }
     
     time_buttons = {

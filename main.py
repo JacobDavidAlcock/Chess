@@ -325,6 +325,11 @@ def main_loop():
                     if chess_clock:
                         chess_clock.start_turn(current_player)
                     
+                    # Clear hints after move
+                    hint_enabled = False
+                    hint_move = None
+                    hint_button.text = "Show Hint"
+                    
                     # Check game status after AI move
                     game_status = chess_board.check_game_status(current_player)
                     if game_status:
@@ -364,6 +369,11 @@ def main_loop():
                             if chess_clock:
                                 chess_clock.start_turn(current_player)
                             
+                            # Clear hints after move
+                            hint_enabled = False
+                            hint_move = None
+                            hint_button.text = "Show Hint"
+                            
                             # Check game status after promotion
                             game_status = chess_board.check_game_status(current_player)
                             if game_status:
@@ -397,6 +407,9 @@ def main_loop():
                                 hint_move = (hint_piece.position, hint_target)
                             else:
                                 hint_move = None
+                        
+                        # Update button text
+                        hint_button.text = "Hide Hint" if hint_enabled else "Show Hint"
 
                     if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                         x, y = event.pos
@@ -440,6 +453,11 @@ def main_loop():
                                         # Start new turn for chess clock
                                         if chess_clock:
                                             chess_clock.start_turn(current_player)
+                                        
+                                        # Clear hints after move
+                                        hint_enabled = False
+                                        hint_move = None
+                                        hint_button.text = "Show Hint"
                                         
                                         # Check game status after human move
                                         game_status = chess_board.check_game_status(current_player)
@@ -501,7 +519,7 @@ def main_loop():
             sub_text_rect = sub_text.get_rect(center=(WIDTH // 2, HEIGHT // 2 + 20))
             screen.blit(sub_text, sub_text_rect)
 
-        # Update the screen
+                # Update the screen
         pygame.display.update()
     
         # Set the frame rate of the game to 60 FPS

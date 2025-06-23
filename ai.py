@@ -112,7 +112,7 @@ class RandomAI:
                 return selected_piece, random.choice(moves)
 
 class MinimaxAI:
-    def __init__(self, color, depth=2):
+    def __init__(self, color, depth=2):  # Reduced from 2 to keep it moderate
         self.color = color
         self.depth = depth
 
@@ -170,6 +170,9 @@ class MinimaxAI:
 
     def _evaluate_board(self, board):
         score = 0
+        our_mobility = 0
+        enemy_mobility = 0
+        
         for x in range(8):
             for y in range(8):
                 piece = board.get_piece_at_position((x, y))
@@ -192,25 +195,29 @@ class MinimaxAI:
                     
                     if piece.color == self.color:
                         score += piece_value
+                        # Count mobility for our pieces (lightweight)
+                        if piece_type in ['Queen', 'Rook', 'Bishop']:  # Only major pieces for performance
+                            our_mobility += len(piece.get_moves()) * 0.01
                     else:
                         score -= piece_value
+                        # Count enemy mobility (lightweight)
+                        if piece_type in ['Queen', 'Rook', 'Bishop']:  # Only major pieces for performance
+                            enemy_mobility += len(piece.get_moves()) * 0.01
                         
-        # Add bonus for mobility (number of legal moves)
-        our_moves = len(board.get_all_legal_moves_for_player(self.color))
-        enemy_moves = len(board.get_all_legal_moves_for_player('white' if self.color == 'black' else 'black'))
-        score += (our_moves - enemy_moves) * 0.1
+        # Add mobility bonus (reduced weight for performance)
+        score += (our_mobility - enemy_mobility)
         
-        # Add bonus for king safety
+        # King safety evaluation (simplified)
         if board.is_in_check(self.color):
-            score -= 0.5
+            score -= 0.3
         enemy_color = 'white' if self.color == 'black' else 'black'
         if board.is_in_check(enemy_color):
-            score += 0.5
+            score += 0.3
             
         return score
 
 class AlphaBetaAI(MinimaxAI):
-    def __init__(self, color, depth=3): # Increased default depth for a tougher AI
+    def __init__(self, color, depth=4): # Increased depth for highest difficulty
         super().__init__(color, depth)
 
     def get_move(self, board):
@@ -262,38 +269,41 @@ class AlphaBetaAI(MinimaxAI):
 
 class AggressiveAI(AlphaBetaAI):
     """AI that prefers attacking moves and piece activity"""
-    def __init__(self, color, depth=3):
+    def __init__(self, color, depth=3):  # Intermediate difficulty
         super().__init__(color, depth)
         
     def _evaluate_board(self, board):
         score = super()._evaluate_board(board)
         
-        # Bonus for attacking opponent's pieces
+        # Optimized bonus for attacking opponent's pieces (reduced complexity)
         enemy_color = 'white' if self.color == 'black' else 'black'
+        attack_bonus = 0
+        center_bonus = 0
+        
         for x in range(8):
             for y in range(8):
                 piece = board.get_piece_at_position((x, y))
                 if piece is not None and piece.color == self.color:
-                    moves = piece.get_moves()
-                    for move in moves:
-                        target_piece = board.get_piece_at_position(move)
-                        if target_piece and target_piece.color == enemy_color:
-                            # Bonus for attacking higher value pieces
-                            target_value = PIECE_VALUES.get(type(target_piece).__name__, 0)
-                            score += target_value * 0.1
-                            
-        # Bonus for pieces in center squares
-        center_squares = [(3,3), (3,4), (4,3), (4,4)]
-        for pos in center_squares:
-            piece = board.get_piece_at_position(pos)
-            if piece and piece.color == self.color:
-                score += 0.3
-                
+                    # Center control bonus (lightweight check)
+                    if 2 <= x <= 5 and 2 <= y <= 5:  # Expanded center
+                        center_bonus += 0.1
+                    
+                    # Only check attack potential for major pieces (performance optimization)
+                    if piece.__class__.__name__ in ['Queen', 'Rook', 'Bishop', 'Knight']:
+                        moves = piece.get_moves()
+                        for move in moves:
+                            target_piece = board.get_piece_at_position(move)
+                            if target_piece and target_piece.color == enemy_color:
+                                # Simplified attack bonus
+                                attack_bonus += 0.05
+                                break  # Only count first attack per piece for performance
+                                
+        score += attack_bonus + center_bonus
         return score
 
 class DefensiveAI(AlphaBetaAI):
     """AI that prefers solid, defensive moves and king safety"""
-    def __init__(self, color, depth=3):
+    def __init__(self, color, depth=3):  # Intermediate difficulty
         super().__init__(color, depth)
         
     def _evaluate_board(self, board):
@@ -303,21 +313,13 @@ class DefensiveAI(AlphaBetaAI):
         if board.is_in_check(self.color):
             score -= 1.0
             
-        # Bonus for pieces defending each other
-        for x in range(8):
-            for y in range(8):
-                piece = board.get_piece_at_position((x, y))
-                if piece is not None and piece.color == self.color:
-                    moves = piece.get_moves()
-                    for move in moves:
-                        defending_piece = board.get_piece_at_position(move)
-                        if defending_piece and defending_piece.color == self.color:
-                            score += 0.1
-                            
-        # Bonus for keeping king safe (surrounded by pieces)
+        # Optimized king safety evaluation
         king_pos = board.king_position[self.color]
         king_x, king_y = king_pos
         friendly_pieces_nearby = 0
+        defense_bonus = 0
+        
+        # Check king safety (lightweight)
         for dx in [-1, 0, 1]:
             for dy in [-1, 0, 1]:
                 if dx == 0 and dy == 0:
@@ -327,6 +329,24 @@ class DefensiveAI(AlphaBetaAI):
                     piece = board.get_piece_at_position((nx, ny))
                     if piece and piece.color == self.color:
                         friendly_pieces_nearby += 1
+        
         score += friendly_pieces_nearby * 0.2
         
+        # Simplified piece defense evaluation (only for major pieces)
+        for x in range(8):
+            for y in range(8):
+                piece = board.get_piece_at_position((x, y))
+                if piece is not None and piece.color == self.color:
+                    # Only check defense for valuable pieces
+                    if piece.__class__.__name__ in ['Queen', 'Rook']:
+                        # Quick check if piece is defended
+                        for dx, dy in [(-1,-1), (-1,0), (-1,1), (0,-1), (0,1), (1,-1), (1,0), (1,1)]:
+                            nx, ny = x + dx, y + dy
+                            if 0 <= nx < 8 and 0 <= ny < 8:
+                                defender = board.get_piece_at_position((nx, ny))
+                                if defender and defender.color == self.color:
+                                    defense_bonus += 0.05
+                                    break  # Only count first defender for performance
+        
+        score += defense_bonus
         return score 
