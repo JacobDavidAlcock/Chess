@@ -254,6 +254,7 @@ def main_loop():
      promotion_dialog = None
      hint_move = None  # Store the hint move to highlight
      hint_ai = MinimaxAI(current_player, depth=2)  # AI for hints
+     hint_enabled = False  # Track if hints are currently shown
 
      while True:
         # Call the main menu function to start the game
@@ -381,14 +382,21 @@ def main_loop():
                         break # Exit event loop for this frame
 
                     if hint_button.handle_event(event):
-                        # Get hint from AI
-                        hint_ai.color = current_player  # Update AI color to current player
-                        hint_result = hint_ai.get_move(chess_board)
-                        if hint_result:
-                            hint_piece, hint_target = hint_result
-                            hint_move = (hint_piece.position, hint_target)
-                        else:
+                        # Toggle hint system
+                        if hint_enabled and hint_move:
+                            # Turn off hints
+                            hint_enabled = False
                             hint_move = None
+                        else:
+                            # Turn on hints - calculate best move
+                            hint_enabled = True
+                            hint_ai.color = current_player  # Update AI color to current player
+                            hint_result = hint_ai.get_move(chess_board)
+                            if hint_result:
+                                hint_piece, hint_target = hint_result
+                                hint_move = (hint_piece.position, hint_target)
+                            else:
+                                hint_move = None
 
                     if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                         x, y = event.pos
@@ -498,6 +506,11 @@ def main_loop():
     
         # Set the frame rate of the game to 60 FPS
         clock.tick(60)
+
+def update_hint_button_text(hint_enabled):
+    """Update hint button text based on current state"""
+    global hint_button
+    hint_button.text = "Hide Hint" if hint_enabled else "Show Hint"
 
 main_loop()
 
