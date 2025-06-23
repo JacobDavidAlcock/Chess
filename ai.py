@@ -9,6 +9,82 @@ PIECE_VALUES = {
     'King': 100
 }
 
+# Piece-Square Tables for positional evaluation
+PAWN_TABLE = [
+    [0,  0,  0,  0,  0,  0,  0,  0],
+    [50, 50, 50, 50, 50, 50, 50, 50],
+    [10, 10, 20, 30, 30, 20, 10, 10],
+    [5,  5, 10, 25, 25, 10,  5,  5],
+    [0,  0,  0, 20, 20,  0,  0,  0],
+    [5, -5,-10,  0,  0,-10, -5,  5],
+    [5, 10, 10,-20,-20, 10, 10,  5],
+    [0,  0,  0,  0,  0,  0,  0,  0]
+]
+
+KNIGHT_TABLE = [
+    [-50,-40,-30,-30,-30,-30,-40,-50],
+    [-40,-20,  0,  0,  0,  0,-20,-40],
+    [-30,  0, 10, 15, 15, 10,  0,-30],
+    [-30,  5, 15, 20, 20, 15,  5,-30],
+    [-30,  0, 15, 20, 20, 15,  0,-30],
+    [-30,  5, 10, 15, 15, 10,  5,-30],
+    [-40,-20,  0,  5,  5,  0,-20,-40],
+    [-50,-40,-30,-30,-30,-30,-40,-50]
+]
+
+BISHOP_TABLE = [
+    [-20,-10,-10,-10,-10,-10,-10,-20],
+    [-10,  0,  0,  0,  0,  0,  0,-10],
+    [-10,  0,  5, 10, 10,  5,  0,-10],
+    [-10,  5,  5, 10, 10,  5,  5,-10],
+    [-10,  0, 10, 10, 10, 10,  0,-10],
+    [-10, 10, 10, 10, 10, 10, 10,-10],
+    [-10,  5,  0,  0,  0,  0,  5,-10],
+    [-20,-10,-10,-10,-10,-10,-10,-20]
+]
+
+ROOK_TABLE = [
+    [0,  0,  0,  0,  0,  0,  0,  0],
+    [5, 10, 10, 10, 10, 10, 10,  5],
+    [-5,  0,  0,  0,  0,  0,  0, -5],
+    [-5,  0,  0,  0,  0,  0,  0, -5],
+    [-5,  0,  0,  0,  0,  0,  0, -5],
+    [-5,  0,  0,  0,  0,  0,  0, -5],
+    [-5,  0,  0,  0,  0,  0,  0, -5],
+    [0,  0,  0,  5,  5,  0,  0,  0]
+]
+
+QUEEN_TABLE = [
+    [-20,-10,-10, -5, -5,-10,-10,-20],
+    [-10,  0,  0,  0,  0,  0,  0,-10],
+    [-10,  0,  5,  5,  5,  5,  0,-10],
+    [-5,  0,  5,  5,  5,  5,  0, -5],
+    [0,  0,  5,  5,  5,  5,  0, -5],
+    [-10,  5,  5,  5,  5,  5,  0,-10],
+    [-10,  0,  5,  0,  0,  0,  0,-10],
+    [-20,-10,-10, -5, -5,-10,-10,-20]
+]
+
+KING_TABLE = [
+    [-30,-40,-40,-50,-50,-40,-40,-30],
+    [-30,-40,-40,-50,-50,-40,-40,-30],
+    [-30,-40,-40,-50,-50,-40,-40,-30],
+    [-30,-40,-40,-50,-50,-40,-40,-30],
+    [-20,-30,-30,-40,-40,-30,-30,-20],
+    [-10,-20,-20,-20,-20,-20,-20,-10],
+    [20, 20,  0,  0,  0,  0, 20, 20],
+    [20, 30, 10,  0,  0, 10, 30, 20]
+]
+
+PIECE_TABLES = {
+    'Pawn': PAWN_TABLE,
+    'Knight': KNIGHT_TABLE,
+    'Bishop': BISHOP_TABLE,
+    'Rook': ROOK_TABLE,
+    'Queen': QUEEN_TABLE,
+    'King': KING_TABLE
+}
+
 class RandomAI:
     def __init__(self, color):
         self.color = color
@@ -98,11 +174,39 @@ class MinimaxAI:
             for y in range(8):
                 piece = board.get_piece_at_position((x, y))
                 if piece is not None:
-                    value = PIECE_VALUES.get(type(piece).__name__, 0)
-                    if piece.color == self.color:
-                        score += value
+                    piece_type = type(piece).__name__
+                    base_value = PIECE_VALUES.get(piece_type, 0)
+                    
+                    # Get positional bonus from piece-square tables
+                    if piece_type in PIECE_TABLES:
+                        table = PIECE_TABLES[piece_type]
+                        # Flip table for black pieces
+                        if piece.color == 'black':
+                            positional_bonus = table[7-y][x] / 100.0
+                        else:
+                            positional_bonus = table[y][x] / 100.0
                     else:
-                        score -= value
+                        positional_bonus = 0
+                    
+                    piece_value = base_value + positional_bonus
+                    
+                    if piece.color == self.color:
+                        score += piece_value
+                    else:
+                        score -= piece_value
+                        
+        # Add bonus for mobility (number of legal moves)
+        our_moves = len(board.get_all_legal_moves_for_player(self.color))
+        enemy_moves = len(board.get_all_legal_moves_for_player('white' if self.color == 'black' else 'black'))
+        score += (our_moves - enemy_moves) * 0.1
+        
+        # Add bonus for king safety
+        if board.is_in_check(self.color):
+            score -= 0.5
+        enemy_color = 'white' if self.color == 'black' else 'black'
+        if board.is_in_check(enemy_color):
+            score += 0.5
+            
         return score
 
 class AlphaBetaAI(MinimaxAI):
@@ -155,3 +259,74 @@ class AlphaBetaAI(MinimaxAI):
                 if beta <= alpha:
                     break # Prune
             return min_eval if min_eval != float('inf') else 0 
+
+class AggressiveAI(AlphaBetaAI):
+    """AI that prefers attacking moves and piece activity"""
+    def __init__(self, color, depth=3):
+        super().__init__(color, depth)
+        
+    def _evaluate_board(self, board):
+        score = super()._evaluate_board(board)
+        
+        # Bonus for attacking opponent's pieces
+        enemy_color = 'white' if self.color == 'black' else 'black'
+        for x in range(8):
+            for y in range(8):
+                piece = board.get_piece_at_position((x, y))
+                if piece is not None and piece.color == self.color:
+                    moves = piece.get_moves()
+                    for move in moves:
+                        target_piece = board.get_piece_at_position(move)
+                        if target_piece and target_piece.color == enemy_color:
+                            # Bonus for attacking higher value pieces
+                            target_value = PIECE_VALUES.get(type(target_piece).__name__, 0)
+                            score += target_value * 0.1
+                            
+        # Bonus for pieces in center squares
+        center_squares = [(3,3), (3,4), (4,3), (4,4)]
+        for pos in center_squares:
+            piece = board.get_piece_at_position(pos)
+            if piece and piece.color == self.color:
+                score += 0.3
+                
+        return score
+
+class DefensiveAI(AlphaBetaAI):
+    """AI that prefers solid, defensive moves and king safety"""
+    def __init__(self, color, depth=3):
+        super().__init__(color, depth)
+        
+    def _evaluate_board(self, board):
+        score = super()._evaluate_board(board)
+        
+        # Extra penalty for being in check
+        if board.is_in_check(self.color):
+            score -= 1.0
+            
+        # Bonus for pieces defending each other
+        for x in range(8):
+            for y in range(8):
+                piece = board.get_piece_at_position((x, y))
+                if piece is not None and piece.color == self.color:
+                    moves = piece.get_moves()
+                    for move in moves:
+                        defending_piece = board.get_piece_at_position(move)
+                        if defending_piece and defending_piece.color == self.color:
+                            score += 0.1
+                            
+        # Bonus for keeping king safe (surrounded by pieces)
+        king_pos = board.king_position[self.color]
+        king_x, king_y = king_pos
+        friendly_pieces_nearby = 0
+        for dx in [-1, 0, 1]:
+            for dy in [-1, 0, 1]:
+                if dx == 0 and dy == 0:
+                    continue
+                nx, ny = king_x + dx, king_y + dy
+                if 0 <= nx < 8 and 0 <= ny < 8:
+                    piece = board.get_piece_at_position((nx, ny))
+                    if piece and piece.color == self.color:
+                        friendly_pieces_nearby += 1
+        score += friendly_pieces_nearby * 0.2
+        
+        return score 

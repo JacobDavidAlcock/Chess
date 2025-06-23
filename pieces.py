@@ -78,6 +78,15 @@ class Pawn(ChessPiece):
         self.first_move = False
         return True    
 
+    def can_promote(self):
+        """Check if this pawn can be promoted (reached the opposite end)"""
+        x, y = self.position
+        if self.color == 'white' and y == 7:
+            return True
+        elif self.color == 'black' and y == 0:
+            return True
+        return False
+
     def copy(self, get_piece_at_position):
         pawn_copy = super().copy(get_piece_at_position)
         pawn_copy.first_move = self.first_move
@@ -88,9 +97,20 @@ class Rook(ChessPiece):
         super().__init__(color, position)
         self.get_piece_at_position = get_piece_at_position
         self.image = pygame.transform.scale(pygame.image.load(f"Icons/chess-rook-solid{'-white' if color == 'white' else ''}.png"), (30, 40))
+        self.has_moved = False
 
     def draw(self, surface, image):
         super().draw(surface, self.image)
+
+    def move(self, new_position):
+        super().move(new_position)
+        self.has_moved = True
+        return True
+
+    def copy(self, get_piece_at_position):
+        rook_copy = super().copy(get_piece_at_position)
+        rook_copy.has_moved = self.has_moved
+        return rook_copy
 
     def get_moves(self):
         moves = []
@@ -207,9 +227,20 @@ class King(ChessPiece):
         super().__init__(color, position)
         self.image = pygame.transform.scale(pygame.image.load(f"Icons/chess-king-solid{'-white' if color == 'white' else ''}.png"), (30, 40))
         self.get_piece_at_position = get_piece_at_position
+        self.has_moved = False
 
     def draw(self, surface, image):
         super().draw(surface, self.image) 
+
+    def move(self, new_position):
+        super().move(new_position)
+        self.has_moved = True
+        return True
+
+    def copy(self, get_piece_at_position):
+        king_copy = super().copy(get_piece_at_position)
+        king_copy.has_moved = self.has_moved
+        return king_copy
 
     def get_moves(self):
         moves = []
